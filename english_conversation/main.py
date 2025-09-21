@@ -56,9 +56,6 @@ if "messages" not in st.session_state:
         return_messages=True
     )
 
-    # モード「日常英会話」用のChain作成
-    st.session_state.chain_basic_conversation = ft.create_chain(ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION)
-
 # 初期表示
 # col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
 # 提出課題用
@@ -93,6 +90,22 @@ with col3:
     st.session_state.pre_mode = st.session_state.mode
 with col4:
     st.session_state.englv = st.selectbox(label="英語レベル", options=ct.ENGLISH_LEVEL_OPTION, label_visibility="collapsed")
+    if st.session_state.mode == ct.MODE_1:
+        if st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[0]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION_FOR_BEGINNER
+        elif st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[1]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION_FOR_INTERMEDIATE
+        elif st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[2]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION_FOR_ADVANCED
+    else:
+        if st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[0]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_FOR_BEGINNER
+        elif st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[1]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_FOR_INTERMEDIATE
+        elif st.session_state.englv == ct.ENGLISH_LEVEL_OPTION[2]:
+            st.session_state.system_template = ct.SYSTEM_TEMPLATE_FOR_ADVANCED
+#    print(st.session_state.system_template)
+
 
 with st.chat_message("assistant", avatar="images/ai_icon.jpg"):
     st.markdown("こちらは生成AIによる音声英会話の練習アプリです。何度も繰り返し練習し、英語力をアップさせましょう。")
@@ -138,7 +151,7 @@ if st.session_state.start_flg:
     # 「ディクテーション」ボタン押下時か、「英会話開始」ボタン押下時か、チャット送信時
     if st.session_state.mode == ct.MODE_3 and (st.session_state.dictation_button_flg or st.session_state.dictation_count == 0 or st.session_state.dictation_chat_message):
         if st.session_state.dictation_first_flg:
-            st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
+            st.session_state.chain_create_problem = ft.create_chain(st.session_state.system_template)
             st.session_state.dictation_first_flg = False
         # チャット入力以外
         if not st.session_state.chat_open_flg:
@@ -165,11 +178,11 @@ if st.session_state.start_flg:
             st.session_state.messages.append({"role": "user", "content": st.session_state.dictation_chat_message})
             
             with st.spinner('評価結果の生成中...'):
-                system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                system_template_evaluation = ct.SYSTEM_TEMPLATE_EVALUATION.format(
                     llm_text=st.session_state.problem,
                     user_text=st.session_state.dictation_chat_message
                 )
-                st.session_state.chain_evaluation = ft.create_chain(system_template)
+                st.session_state.chain_evaluation = ft.create_chain(system_template_evaluation)
                 # 問題文と回答を比較し、評価結果の生成を指示するプロンプトを作成
                 llm_response_evaluation = ft.create_evaluation()
             
@@ -190,6 +203,9 @@ if st.session_state.start_flg:
     
     # モード：「日常英会話」
     if st.session_state.mode == ct.MODE_1:
+        # モード「日常英会話」用のChain作成
+        st.session_state.chain_basic_conversation = ft.create_chain(system_template=st.session_state.system_template)
+
         # 音声入力を受け取って音声ファイルを作成
         audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
         ft.record_audio(audio_input_file_path)
@@ -234,7 +250,7 @@ if st.session_state.start_flg:
     # 「シャドーイング」ボタン押下時か、「英会話開始」ボタン押下時
     if st.session_state.mode == ct.MODE_2 and (st.session_state.shadowing_button_flg or st.session_state.shadowing_count == 0 or st.session_state.shadowing_audio_input_flg):
         if st.session_state.shadowing_first_flg:
-            st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
+            st.session_state.chain_create_problem = ft.create_chain(system_template=st.session_state.system_template)
             st.session_state.shadowing_first_flg = False
         
         if not st.session_state.shadowing_audio_input_flg:
@@ -264,11 +280,11 @@ if st.session_state.start_flg:
 
         with st.spinner('評価結果の生成中...'):
             if st.session_state.shadowing_evaluation_first_flg:
-                system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                system_template_evaluation = ct.SYSTEM_TEMPLATE_EVALUATION.format(
                     llm_text=st.session_state.problem,
                     user_text=audio_input_text
                 )
-                st.session_state.chain_evaluation = ft.create_chain(system_template)
+                st.session_state.chain_evaluation = ft.create_chain(system_template_evaluation)
                 st.session_state.shadowing_evaluation_first_flg = False
             # 問題文と回答を比較し、評価結果の生成を指示するプロンプトを作成
             llm_response_evaluation = ft.create_evaluation()
