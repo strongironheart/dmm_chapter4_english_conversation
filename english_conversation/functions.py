@@ -22,21 +22,51 @@ import constants as ct
 def record_audio(audio_input_file_path):
     """
     音声入力を受け取って音声ファイルを作成
+    5秒間無音が続いたら自動で録音終了
     """
 
-    audio = audiorecorder(
-        start_prompt="発話開始",
-        pause_prompt="やり直す",
-        stop_prompt="発話終了",
-        start_style={"color":"white", "background-color":"black"},
-        pause_style={"color":"gray", "background-color":"white"},
-        stop_style={"color":"white", "background-color":"black"}
-    )
+    import pyaudio
+    import numpy as np
+    import wave
+    import time
+    import streamlit as st
 
-    if len(audio) > 0:
-        audio.export(audio_input_file_path, format="wav")
-    else:
-        st.stop()
+    CHUNK = 1024
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    RATE = 16000
+    SILENCE_THRESHOLD = 500  # 無音判定の閾値（調整可）
+    SILENCE_DURATION = 5     # 無音が続く秒数
+
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    frames = []
+    silence_start = None
+
+    st.info("録音中...（5秒間無音で自動終了）")
+
+    while True:
+        data = stream.read(CHUNK)
+        frames.append(data)
+        audio_data = np.frombuffer(data, dtype=np.int16)
+        if np.abs(audio_data).mean() < SILENCE_THRESHOLD:
+            if silence_start is None:
+                silence_start = time.time()
+            elif time.time() - silence_start > SILENCE_DURATION:
+                break
+        else:
+            silence_start = None
+
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    wf = wave.open(audio_input_file_path, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
 
 def transcribe_audio(audio_input_file_path):
     """
@@ -174,3 +204,25 @@ def create_evaluation():
     llm_response_evaluation = st.session_state.chain_evaluation.predict(input="")
 
     return llm_response_evaluation
+
+# 「一時中断」ボタン表示と押下時の処理
+def show_pause_button_and_handle():
+    """
+    一時中断ボタンの表示と中断処理
+    """
+    import streamlit as st
+
+    pause_col = st.columns([1])[0]
+    with pause_col:
+        st.session_state.pause_flg = st.button("一時中断", use_container_width=True, type="secondary", key="pause_btn")
+
+    if st.session_state.pause_flg:
+        st.session_state.start_flg = False
+        st.session_state.dictation_flg = False
+        st.session_state.shadowing_flg = False
+        st.session_state.shadowing_button_flg = False
+        st.session_state.dictation_button_flg = False
+        st.session_state.basic_button_flg = False
+        st.session_state.chat_open_flg = False
+        st.info("一時中断しました。再開する場合は「開始」ボタンを押してください。")
+        st.stop()
