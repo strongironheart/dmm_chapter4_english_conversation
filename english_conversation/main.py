@@ -141,6 +141,9 @@ if st.session_state.dictation_chat_message and not st.session_state.chat_open_fl
 # 「英会話開始」ボタンが押された場合の処理
 if st.session_state.start_flg:
 
+    # 「一時中断」ボタン表示と押下時の処理
+    ft.show_pause_button_and_handle()
+    
     # モード：「ディクテーション」
     # 「ディクテーション」ボタン押下時か、「英会話開始」ボタン押下時か、チャット送信時
     if st.session_state.mode == ct.MODE_3 and (st.session_state.dictation_button_flg or st.session_state.dictation_count == 0 or st.session_state.dictation_chat_message):
@@ -295,7 +298,7 @@ if st.session_state.start_flg:
 
         # 「シャドーイング」ボタンを表示するために再描画
         st.rerun()
-    
+
     # LLMレスポンスの下部にモード実行のボタン表示
     if st.session_state.shadowing_flg != False and st.session_state.dictation_flg == False:
         st.session_state.shadowing_button_flg = st.button("シャドーイング開始")
@@ -303,4 +306,4 @@ if st.session_state.start_flg:
         st.session_state.dictation_button_flg = st.button("ディクテーション開始")
     elif (st.session_state.shadowing_flg == False) and (st.session_state.dictation_flg == False):
         st.session_state.basic_button_flg = st.button("日常英会話開始")
-        
+

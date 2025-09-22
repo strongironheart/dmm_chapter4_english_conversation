@@ -204,3 +204,25 @@ def create_evaluation():
     llm_response_evaluation = st.session_state.chain_evaluation.predict(input="")
 
     return llm_response_evaluation
+
+# 「一時中断」ボタン表示と押下時の処理
+def show_pause_button_and_handle():
+    """
+    一時中断ボタンの表示と中断処理
+    """
+    import streamlit as st
+
+    pause_col = st.columns([1])[0]
+    with pause_col:
+        st.session_state.pause_flg = st.button("一時中断", use_container_width=True, type="secondary", key="pause_btn")
+
+    if st.session_state.pause_flg:
+        st.session_state.start_flg = False
+        st.session_state.dictation_flg = False
+        st.session_state.shadowing_flg = False
+        st.session_state.shadowing_button_flg = False
+        st.session_state.dictation_button_flg = False
+        st.session_state.basic_button_flg = False
+        st.session_state.chat_open_flg = False
+        st.info("一時中断しました。再開する場合は「開始」ボタンを押してください。")
+        st.stop()
