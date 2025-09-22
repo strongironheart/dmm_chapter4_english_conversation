@@ -129,12 +129,6 @@ for message in st.session_state.messages:
     else:
         st.divider()
 
-# LLMレスポンスの下部にモード実行のボタン表示
-if st.session_state.shadowing_flg:
-    st.session_state.shadowing_button_flg = st.button("シャドーイング開始")
-if st.session_state.dictation_flg:
-    st.session_state.dictation_button_flg = st.button("ディクテーション開始")
-
 # 「ディクテーション」モードのチャット入力受付時に実行
 if st.session_state.chat_open_flg:
     st.info("AIが読み上げた音声を、画面下部のチャット欄からそのまま入力・送信してください。")
@@ -301,3 +295,12 @@ if st.session_state.start_flg:
 
         # 「シャドーイング」ボタンを表示するために再描画
         st.rerun()
+    
+    # LLMレスポンスの下部にモード実行のボタン表示
+    if st.session_state.shadowing_flg != False and st.session_state.dictation_flg == False:
+        st.session_state.shadowing_button_flg = st.button("シャドーイング開始")
+    elif st.session_state.dictation_flg != False and st.session_state.shadowing_flg == False:
+        st.session_state.dictation_button_flg = st.button("ディクテーション開始")
+    elif (st.session_state.shadowing_flg == False) and (st.session_state.dictation_flg == False):
+        st.session_state.basic_button_flg = st.button("日常英会話開始")
+        
