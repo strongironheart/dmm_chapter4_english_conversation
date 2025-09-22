@@ -22,21 +22,51 @@ import constants as ct
 def record_audio(audio_input_file_path):
     """
     音声入力を受け取って音声ファイルを作成
+    5秒間無音が続いたら自動で録音終了
     """
 
-    audio = audiorecorder(
-        start_prompt="発話開始",
-        pause_prompt="やり直す",
-        stop_prompt="発話終了",
-        start_style={"color":"white", "background-color":"black"},
-        pause_style={"color":"gray", "background-color":"white"},
-        stop_style={"color":"white", "background-color":"black"}
-    )
+    import pyaudio
+    import numpy as np
+    import wave
+    import time
+    import streamlit as st
 
-    if len(audio) > 0:
-        audio.export(audio_input_file_path, format="wav")
-    else:
-        st.stop()
+    CHUNK = 1024
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    RATE = 16000
+    SILENCE_THRESHOLD = 500  # 無音判定の閾値（調整可）
+    SILENCE_DURATION = 5     # 無音が続く秒数
+
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    frames = []
+    silence_start = None
+
+    st.info("録音中...（5秒間無音で自動終了）")
+
+    while True:
+        data = stream.read(CHUNK)
+        frames.append(data)
+        audio_data = np.frombuffer(data, dtype=np.int16)
+        if np.abs(audio_data).mean() < SILENCE_THRESHOLD:
+            if silence_start is None:
+                silence_start = time.time()
+            elif time.time() - silence_start > SILENCE_DURATION:
+                break
+        else:
+            silence_start = None
+
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    wf = wave.open(audio_input_file_path, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
 
 def transcribe_audio(audio_input_file_path):
     """
